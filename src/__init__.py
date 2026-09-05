@@ -1,0 +1,1 @@
+"""ObsidianDQ application package."""

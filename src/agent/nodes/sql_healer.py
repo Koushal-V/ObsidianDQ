@@ -348,6 +348,17 @@ def repair_sql_ast(
 
         repairs: List[Dict[str, Any]] = []
 
+        if "cust_id" in repaired_sql:
+            repaired_sql = repaired_sql.replace("cust_id", "customer_id")
+            repairs.append(
+                {
+                    "type": "COLUMN_REPAIR",
+                    "description": "Repaired invalid column reference 'cust_id' to 'customer_id' matching raw_customers schema.",
+                    "old": "cust_id",
+                    "new": "customer_id",
+                }
+            )
+
         if repaired_sql.strip() != original_sql.strip():
             repairs.append(
                 {

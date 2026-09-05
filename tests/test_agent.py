@@ -209,11 +209,8 @@ def test_complete_pipeline():
 
     assert result["issue_count"] >= 1
 
-    assert result["sql_changed"] is True
+    assert result["requires_human_approval"] is True
 
-    assert result["guardrails_approved"] is True
+    assert result["pipeline_status"] == "WAITING_FOR_HUMAN_APPROVAL"
 
-    assert (
-        result["guardrails_action"]
-        == "CONTROLLED_REMEDIATION"
-    )
+    assert result["route_taken"] == ["needs_human_review"]

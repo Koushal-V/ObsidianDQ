@@ -8,4 +8,4 @@ SELECT
     o.order_date
 FROM stg_orders o
 LEFT JOIN raw_customers c
-    ON o.customer_id = c.customer_id;
+    ON o.customer_id = c.cust_id;

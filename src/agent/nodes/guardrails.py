@@ -70,7 +70,6 @@ def validate_dq_result(dq_result: Dict[str, Any]) -> Dict[str, Any]:
         required_fields = [
             "rule",
             "column",
-            "issue",
             "count",
             "severity",
         ]
@@ -80,6 +79,9 @@ def validate_dq_result(dq_result: Dict[str, Any]) -> Dict[str, Any]:
                 errors.append(
                     f"Issue {index} missing '{field}'"
                 )
+
+        if "issue" not in issue and "description" not in issue:
+            errors.append(f"Issue {index} missing 'issue' or 'description'")
 
         # Severity validation
         severity = issue.get("severity")

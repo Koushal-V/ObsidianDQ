@@ -81,6 +81,50 @@ class AgentState(TypedDict, total=False):
 
     potential_root_causes: List[str]
 
+    root_cause_evidence: List[Dict[str, Any]]
+
+    root_cause_reasoning: str
+
+    upstream_causality_proven: bool
+
+    critic_verdict: str
+
+    critic_reasoning: str
+
+    critic_retry_count: int
+
+    root_cause_llm_used: bool
+
+    triage_llm_used: bool
+
+    critic_llm_used: bool
+
+    critic_critique_details: List[Dict[str, Any]]
+
+    # =========================================================
+    # Agent triage and routing
+    # =========================================================
+
+    agent_reasoning: List[Dict[str, Any]]
+
+    agent_proposed_actions: List[Dict[str, Any]]
+
+    agent_tool_calls: List[Dict[str, Any]]
+
+    requires_human_approval: bool
+
+    approval_decision: Optional[str]
+
+    approved_issue_id: Optional[str]
+
+    approved_action: Optional[str]
+
+    route_taken: List[str]
+
+    run_id: str
+
+    escalation_count: int
+
     # =========================================================
     # SQL healing
     # =========================================================
@@ -135,7 +179,7 @@ class AgentState(TypedDict, total=False):
 
 
 def create_initial_state(
-    pipeline_name: str = "ObsidianDQ Phase 1",
+    pipeline_name: str = "ObsidianDQ",
     input_file: str = "data/raw/stg_orders.parquet",
     sql_file: str = "data/queries/fct_sales.sql",
     lineage_file: str = "data/lineage/lineage.json",
@@ -192,6 +236,26 @@ def create_initial_state(
         blast_radius_count=0,
 
         potential_root_causes=[],
+
+        agent_reasoning=[],
+
+        agent_proposed_actions=[],
+
+        agent_tool_calls=[],
+
+        requires_human_approval=False,
+
+        approval_decision=None,
+
+        approved_issue_id=None,
+
+        approved_action=None,
+
+        route_taken=[],
+
+        run_id="",
+
+        escalation_count=0,
 
         original_sql="",
 

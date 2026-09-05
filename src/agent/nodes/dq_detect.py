@@ -46,6 +46,7 @@ def detect_dq_issues(stage_path: str) -> dict:
                     "rule": "NOT_NULL",
                     "column": column,
                     "issue": "Missing values detected",
+                    "description": "Missing values detected",
                     "count": null_count,
                     "severity": "MEDIUM",
                 }
@@ -63,6 +64,7 @@ def detect_dq_issues(stage_path: str) -> dict:
                 "rule": "NO_DUPLICATES",
                 "column": None,
                 "issue": "Duplicate rows detected",
+                "description": "Duplicate rows detected",
                 "count": duplicate_count,
                 "severity": "LOW",
             }
@@ -81,6 +83,7 @@ def detect_dq_issues(stage_path: str) -> dict:
                     "rule": "PRICE_NON_NEGATIVE",
                     "column": "price",
                     "issue": "Negative prices detected",
+                    "description": "Negative prices detected",
                     "count": invalid_price_count,
                     "severity": "HIGH",
                 }
@@ -101,6 +104,7 @@ def detect_dq_issues(stage_path: str) -> dict:
                     "rule": "VALID_STATUS",
                     "column": "status",
                     "issue": "Invalid status values detected",
+                    "description": "Invalid status values detected",
                     "count": invalid_status_count,
                     "severity": "MEDIUM",
                 }
@@ -121,7 +125,28 @@ def detect_dq_issues(stage_path: str) -> dict:
                     "rule": "UNIQUE_ORDER_ID",
                     "column": "order_id",
                     "issue": "Duplicate order IDs detected",
+                    "description": "Duplicate order IDs detected",
                     "count": duplicate_order_ids,
+                    "severity": "HIGH",
+                }
+            )
+
+    # -----------------------------------------------------
+    # 6. Order date validation
+    # -----------------------------------------------------
+
+    if "order_date" in df.columns:
+        dates = df["order_date"].dropna().astype(str)
+        invalid_date_count = int((dates < "2020-01-01").sum())
+
+        if invalid_date_count > 0:
+            issues.append(
+                {
+                    "rule": "ORDER_DATE_RANGE",
+                    "column": "order_date",
+                    "issue": "Out-of-range order dates detected",
+                    "description": "Out-of-range order dates detected",
+                    "count": invalid_date_count,
                     "severity": "HIGH",
                 }
             )

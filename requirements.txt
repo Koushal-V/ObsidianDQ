@@ -3,6 +3,7 @@ faker
 great-expectations
 guardrails-ai
 langchain-google-genai
+google-genai
 langchain-groq
 langgraph
 networkx
@@ -14,3 +15,6 @@ ragas
 sqlglot
 streamlit
 pytest
+fastapi
+uvicorn
+python-multipart

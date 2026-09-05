@@ -4,7 +4,7 @@ CUST_0002,Leslie Johnson,robinsonwilliam@example.org,Monaco
 CUST_0003,Matthew Gardner,shaneramirez@example.org,Senegal
 CUST_0004,Melissa Peterson,jasongallagher@example.org,Bermuda
 CUST_0005,Ian Cooper,lindsay78@example.org,Uzbekistan
-CUST_0006,Juan Calderon,barbara10@example.net,Denmark
+CUST_0006,Juan Calderon,,Denmark
 CUST_0007,Victoria Wyatt,jamesshawn@example.com,Central African Republic
 CUST_0008,Daniel Adams,lynchgeorge@example.net,Ecuador
 CUST_0009,James Mayo,gabriellecameron@example.org,Denmark
@@ -14,7 +14,7 @@ CUST_0012,Deborah Richards,icox@example.net,Lithuania
 CUST_0013,Anthony Rodriguez,laurahenderson@example.org,Hungary
 CUST_0014,Zachary Rice,frazierdanny@example.net,Sao Tome and Principe
 CUST_0015,Martin Rodriguez,amoore@example.net,Turkey
-CUST_0016,Valerie Gill,harrellkenneth@example.net,Madagascar
+CUST_0016,Valerie Gill,invalid_email_format,Madagascar
 CUST_0017,Brittany Farmer,georgetracy@example.org,Vanuatu
 CUST_0018,William Roman,brianhumphrey@example.org,Belize
 CUST_0019,Rose Spence,davidalvarez@example.net,Chad
@@ -24,7 +24,7 @@ CUST_0022,George Chapman,briannasmith@example.net,Norfolk Island
 CUST_0023,Austin Johnson,chad34@example.net,Libyan Arab Jamahiriya
 CUST_0024,Carlos Walls,esanchez@example.com,Comoros
 CUST_0025,Matthew Gomez,uowens@example.org,Peru
-CUST_0026,Maria Brown,lauren13@example.org,Comoros
+,Maria Brown,lauren13@example.org,Comoros
 CUST_0027,Brenda White,ewright@example.com,Sri Lanka
 CUST_0028,Krista Williams,novaksara@example.org,Chad
 CUST_0029,John Hancock,martinaaron@example.com,Estonia
