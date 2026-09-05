@@ -1,0 +1,33 @@
+{
+    "nodes": [
+        {
+            "name": "raw_customers",
+            "type": "source",
+            "path": "data/raw/raw_customers.csv"
+        },
+        {
+            "name": "stg_orders",
+            "type": "staging",
+            "path": "data/raw/stg_orders.parquet"
+        },
+        {
+            "name": "fct_sales",
+            "type": "fact",
+            "path": "data/queries/fct_sales.sql"
+        }
+    ],
+    "edges": [
+        {
+            "source": "raw_customers",
+            "target": "stg_orders"
+        },
+        {
+            "source": "stg_orders",
+            "target": "fct_sales"
+        },
+        {
+            "source": "raw_customers",
+            "target": "fct_sales"
+        }
+    ]
+}

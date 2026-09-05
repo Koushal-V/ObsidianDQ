@@ -1,0 +1,101 @@
+customer_id,customer_name,email,country
+CUST_0001,Allison Hill,donaldgarcia@example.net,Uganda
+CUST_0002,Leslie Johnson,robinsonwilliam@example.org,Monaco
+CUST_0003,Matthew Gardner,shaneramirez@example.org,Senegal
+CUST_0004,Melissa Peterson,jasongallagher@example.org,Bermuda
+CUST_0005,Ian Cooper,lindsay78@example.org,Uzbekistan
+CUST_0006,Juan Calderon,barbara10@example.net,Denmark
+CUST_0007,Victoria Wyatt,jamesshawn@example.com,Central African Republic
+CUST_0008,Daniel Adams,lynchgeorge@example.net,Ecuador
+CUST_0009,James Mayo,gabriellecameron@example.org,Denmark
+CUST_0010,Renee Morales,clarksherri@example.net,Germany
+CUST_0011,Jonathan Wilkerson,ithomas@example.org,Samoa
+CUST_0012,Deborah Richards,icox@example.net,Lithuania
+CUST_0013,Anthony Rodriguez,laurahenderson@example.org,Hungary
+CUST_0014,Zachary Rice,frazierdanny@example.net,Sao Tome and Principe
+CUST_0015,Martin Rodriguez,amoore@example.net,Turkey
+CUST_0016,Valerie Gill,harrellkenneth@example.net,Madagascar
+CUST_0017,Brittany Farmer,georgetracy@example.org,Vanuatu
+CUST_0018,William Roman,brianhumphrey@example.org,Belize
+CUST_0019,Rose Spence,davidalvarez@example.net,Chad
+CUST_0020,Shane Henderson,sarahcampos@example.net,Cook Islands
+CUST_0021,Jennifer Powers,samuel87@example.org,Egypt
+CUST_0022,George Chapman,briannasmith@example.net,Norfolk Island
+CUST_0023,Austin Johnson,chad34@example.net,Libyan Arab Jamahiriya
+CUST_0024,Carlos Walls,esanchez@example.com,Comoros
+CUST_0025,Matthew Gomez,uowens@example.org,Peru
+CUST_0026,Maria Brown,lauren13@example.org,Comoros
+CUST_0027,Brenda White,ewright@example.com,Sri Lanka
+CUST_0028,Krista Williams,novaksara@example.org,Chad
+CUST_0029,John Hancock,martinaaron@example.com,Estonia
+CUST_0030,Rachel Mitchell,smoore@example.org,Azerbaijan
+CUST_0031,Kimberly Adkins,williamsthomas@example.net,Cayman Islands
+CUST_0032,Jordan York,larsonemma@example.org,Iraq
+CUST_0033,Steve Sanchez,harveyrobert@example.net,Mongolia
+CUST_0034,Taylor Harris,john62@example.net,Oman
+CUST_0035,Eugene Walton,smithchristine@example.net,Bolivia
+CUST_0036,Daniel Baker,nicole35@example.com,Cayman Islands
+CUST_0037,Joshua Turner,contrerasangela@example.net,Bosnia and Herzegovina
+CUST_0038,Brandy Wilson,newtoneric@example.com,Netherlands
+CUST_0039,Grant Watts,william40@example.org,North Macedonia
+CUST_0040,Donald Smith,danagreen@example.net,Kenya
+CUST_0041,Jessica Smith,landryhannah@example.org,Mayotte
+CUST_0042,Jacob Tran,tanderson@example.com,United Arab Emirates
+CUST_0043,Valerie Williams,jason31@example.com,Slovakia (Slovak Republic)
+CUST_0044,Shelly Dickson,sarayoung@example.org,South Georgia and the South Sandwich Islands
+CUST_0045,Sierra Johnson,kimberly63@example.com,Cayman Islands
+CUST_0046,Ashley Brennan,dwalker@example.com,Gambia
+CUST_0047,Shelby Walker,raymondramirez@example.org,Sierra Leone
+CUST_0048,Martin Ross,sheila14@example.org,Mozambique
+CUST_0049,Deborah Rodriguez,yreed@example.com,Jordan
+CUST_0050,Kayla Cruz,jonathanfletcher@example.org,Mali
+CUST_0051,Kimberly Ball,michaeljones@example.net,Uruguay
+CUST_0052,Erik Charles,william65@example.com,Qatar
+CUST_0053,Cameron Fisher,lbyrd@example.net,Montenegro
+CUST_0054,Joshua Smith,jason99@example.net,Gibraltar
+CUST_0055,Jeremy Lewis,yleon@example.net,Chile
+CUST_0056,Diane Beck,clarence34@example.org,Sri Lanka
+CUST_0057,Alexander Sanchez,xcarr@example.org,Korea
+CUST_0058,Mark Lee,psnyder@example.org,Palau
+CUST_0059,Stephanie Dalton,osbornejeffery@example.net,Maldives
+CUST_0060,Justin Lowery,bryantlaurie@example.net,Marshall Islands
+CUST_0061,Linda Dodson DVM,jrivas@example.com,Ukraine
+CUST_0062,Scott Cole,maryramirez@example.net,Libyan Arab Jamahiriya
+CUST_0063,Denise Jones,jimmy55@example.net,Belgium
+CUST_0064,David Benson,calebrussell@example.net,Lao People's Democratic Republic
+CUST_0065,Daniel Fisher,gateskathy@example.com,Lesotho
+CUST_0066,Guy Molina,vmedina@example.net,South Georgia and the South Sandwich Islands
+CUST_0067,Connie Robinson,ytucker@example.com,Paraguay
+CUST_0068,Jennifer Martin,ncalhoun@example.net,Anguilla
+CUST_0069,Leslie Alvarado,dayderek@example.com,Cocos (Keeling) Islands
+CUST_0070,James Lewis,matthew64@example.com,El Salvador
+CUST_0071,Julie Curry,cookemichael@example.net,Bangladesh
+CUST_0072,Marissa Webster,jamessmith@example.org,Dominican Republic
+CUST_0073,Michael Elliott,stevenscott@example.com,Chad
+CUST_0074,Tracey Higgins,tamirodriguez@example.org,Vanuatu
+CUST_0075,Michael Rubio,mdavid@example.org,Nauru
+CUST_0076,Lori Garcia,melissa91@example.net,Slovenia
+CUST_0077,Joseph Stanley,huntermatthew@example.com,Swaziland
+CUST_0078,Jeffrey Cox PhD,bzimmerman@example.org,Saint Martin
+CUST_0079,Marie Gilbert,umarshall@example.net,Ethiopia
+CUST_0080,David Michael,nicole37@example.net,New Zealand
+CUST_0081,Gabrielle Snyder,hunter35@example.com,Guam
+CUST_0082,Kyle Beard,blackjames@example.org,Saint Helena
+CUST_0083,Justin Allen,fbrewer@example.com,Somalia
+CUST_0084,Edward Sullivan,kevinperkins@example.com,Micronesia
+CUST_0085,Jessica Reese,michael74@example.com,El Salvador
+CUST_0086,Nathan Stewart,jamesrodgers@example.com,Saint Kitts and Nevis
+CUST_0087,Paige Carlson,wallkenneth@example.com,Christmas Island
+CUST_0088,Michael Martinez,mccannangela@example.net,Western Sahara
+CUST_0089,Sean Henry,andrewstaylor@example.com,Guam
+CUST_0090,Anthony Everett,ewilson@example.com,Liechtenstein
+CUST_0091,Mark Brown,lisaavery@example.org,Egypt
+CUST_0092,Phillip Obrien,kimberlyjames@example.com,French Southern Territories
+CUST_0093,Wanda Torres,lynchjody@example.org,Niue
+CUST_0094,Matthew Moore,andreamoore@example.com,Korea
+CUST_0095,Julie Johnson,jasmine71@example.net,Djibouti
+CUST_0096,Rachel Weber,ronaldstephens@example.net,Canada
+CUST_0097,Samantha Jones,lauralarson@example.net,Uruguay
+CUST_0098,Caleb Barker,gbender@example.net,Lithuania
+CUST_0099,Kyle Preston,cassandra01@example.org,Peru
+CUST_0100,Laura Sampson,barbara27@example.net,Pakistan

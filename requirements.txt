@@ -1,0 +1,16 @@
+duckdb
+faker
+great-expectations
+guardrails-ai
+langchain-google-genai
+langchain-groq
+langgraph
+networkx
+pandas
+pyarrow
+pydantic
+python-dotenv
+ragas
+sqlglot
+streamlit
+pytest
