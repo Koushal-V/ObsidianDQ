@@ -36,9 +36,10 @@ def test_run_and_approval_return_dashboard_contract(monkeypatch):
     })
     assert approved.status_code == 200
     resumed = approved.json()
-    assert resumed["workflow_status"] == "APPROVED"
+    assert resumed["workflow_status"] == "VERIFICATION_FAILED"
     assert resumed["guardrails"]["approved"] is True
     assert "data_snapshot" in resumed
+    assert resumed["verification"]["recovery_required"] is True
 
 
 def test_upload_rejects_unsupported_file_type():

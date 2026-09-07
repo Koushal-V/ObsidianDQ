@@ -40,6 +40,10 @@ from .nodes.remediation import remediate_dq_issues
 from .nodes.guardrails import apply_guardrails
 from .nodes.triage_agent import triage_agent_node
 from .nodes.critic_agent import critic_agent_node
+from .nodes.investigation_agent import investigation_agent_node
+from .nodes.planning_agent import planning_agent_node
+from .nodes.verify_agent import verify_remediation_node
+from .utils.memory import save_incident_memory
 
 
 
@@ -421,6 +425,7 @@ def remediation_node(
         "quarantine_file": result.get("quarantine_file"),
         "quarantined_rows": result.get("quarantined_rows", 0),
         "remediation_actions": result.get("actions", []),
+        "cleaned_file": result.get("cleaned_file"),
     }
 
 
@@ -442,6 +447,25 @@ def guardrails_node(state: AgentState) -> Dict[str, Any]:
     if result is None:
         return {}
 
+    memory_record = {
+        "run_id": state.get("run_id"),
+        "affected_stage": state.get("affected_stage"),
+        "root_cause_stage": state.get("root_cause_stage"),
+        "root_cause_reasoning": state.get("root_cause_reasoning"),
+        "issue_keys": [f"{issue.get('rule')}:{issue.get('column')}" for issue in state.get("issues", [])],
+        "failed_columns": [issue.get("column") for issue in state.get("issues", []) if issue.get("column")],
+        "failed_rules": [issue.get("rule") for issue in state.get("issues", [])],
+        "remediation_plan": state.get("remediation_plan", []),
+        "remediation_actions": state.get("remediation_actions", []),
+        "verification_passed": state.get("verification_passed", False),
+        "verification_details": state.get("verification_details", {}),
+    }
+    try:
+        save_incident_memory(memory_record)
+        print("[MEMORY] Incident persisted to incident_memory.jsonl.")
+    except Exception as exc:
+        print(f"[Incident Memory Warning] {exc}")
+
     return {
         "guardrails_result": result,
         "guardrails_approved": result.get("approved", False),
@@ -449,6 +473,20 @@ def guardrails_node(state: AgentState) -> Dict[str, Any]:
         "guardrails_errors": result.get("errors", []),
         "guardrails_warnings": result.get("warnings", []),
     }
+
+
+def verification_recovery_node(state: AgentState) -> Dict[str, Any]:
+    """Stop a failed remediation from being represented as a successful pipeline run."""
+    remaining = state.get("verification_details", {}).get("remaining_issue_count", "unknown")
+    print(f"[RECOVERY] Verification failed; {remaining} issues require a new reviewed remediation run.")
+    return {
+        "pipeline_status": "VERIFICATION_FAILED",
+        "verification_recovery_required": True,
+    }
+
+
+def route_after_verification(state: AgentState) -> str:
+    return "verified" if state.get("verification_passed") else "recovery"
 
 # ============================================================
 # BUILD GRAPH
@@ -485,6 +523,10 @@ def build_graph():
         root_cause_agent_node,
     )
 
+    workflow.add_node("investigation_agent", investigation_agent_node)
+
+    workflow.add_node("planning_agent", planning_agent_node)
+
     workflow.add_node(
         "triage_agent",
         triage_agent_node,
@@ -504,6 +546,10 @@ def build_graph():
         "remediation",
         remediation_node,
     )
+
+    workflow.add_node("verify_agent", verify_remediation_node)
+
+    workflow.add_node("verification_recovery", verification_recovery_node)
 
     workflow.add_node(
         "guardrails",
@@ -534,8 +580,10 @@ def build_graph():
         "lineage_rca",
     )
 
-    workflow.add_edge("lineage_rca", "root_cause_agent")
-    workflow.add_edge("root_cause_agent", "triage_agent")
+    workflow.add_edge("lineage_rca", "investigation_agent")
+    workflow.add_edge("investigation_agent", "root_cause_agent")
+    workflow.add_edge("root_cause_agent", "planning_agent")
+    workflow.add_edge("planning_agent", "triage_agent")
     workflow.add_conditional_edges(
         "triage_agent",
         route_after_triage,
@@ -553,8 +601,8 @@ def build_graph():
         {
             "auto_remediate": "sql_healer",
             "needs_human_review": "human_review_queue",
-            "revision_required": "root_cause_agent",
-            "escalate": "root_cause_agent",
+            "revision_required": "investigation_agent",
+            "escalate": "investigation_agent",
             "no_issues": "guardrails",
         },
     )
@@ -566,8 +614,15 @@ def build_graph():
 
     workflow.add_edge(
         "remediation",
-        "guardrails",
+        "verify_agent",
     )
+
+    workflow.add_conditional_edges(
+        "verify_agent",
+        route_after_verification,
+        {"verified": "guardrails", "recovery": "verification_recovery"},
+    )
+    workflow.add_edge("verification_recovery", "guardrails")
 
     workflow.add_edge(
         "guardrails",

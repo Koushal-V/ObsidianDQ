@@ -14,7 +14,8 @@ from typing import Any, Callable, Dict, List
 
 import pandas as pd
 from .lineage_rca import build_graph, find_ancestors, find_descendants, load_lineage
-from ..utils.llm import generate_text, get_llm_provider
+from ..utils.llm import generate_text_with_audit, get_llm_provider, llm_model_name
+from ..utils.memory import search_similar_incidents
 
 try:
     from google import genai
@@ -91,8 +92,16 @@ def root_cause_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
     input_file = state.get("input_file", "data/raw/stg_orders.parquet")
     critic_verdict = state.get("critic_verdict")
     critic_reasoning = state.get("critic_reasoning")
+    investigation_evidence = state.get("investigation_evidence", [])
+    historical_incidents: List[Dict[str, Any]] = []
+    for issue in issues:
+        column = str(issue.get("column") or "")
+        rule = str(issue.get("rule") or "")
+        if column and rule:
+            historical_incidents.extend(search_similar_incidents(column, rule))
 
     evidence_trail: List[Dict[str, Any]] = []
+    llm_events = list(state.get("llm_execution_events", []))
     root_cause_stage = affected_stage
     reasoning = ""
     proven = False
@@ -154,8 +163,12 @@ Return JSON only with keys root_cause_stage, reasoning, and causality_proven.
 Affected stage: {affected_stage}
 Upstream ancestors: {upstream_ancestors}
 Evidence: {json.dumps(evidence, default=str)}
+Investigation evidence: {json.dumps(investigation_evidence, default=str)}
+Historical incident resolutions: {json.dumps(historical_incidents, default=str)}
+Critic feedback from the prior attempt: {critic_reasoning or 'None'}
 """
-            text = generate_text(prompt, model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"))
+            text, event = generate_text_with_audit(prompt, stage="root_cause_agent", model=llm_model_name("groq"))
+            llm_events.append(event)
             if text:
                 parsed = json.loads(text[text.find("{"):text.rfind("}") + 1])
                 conclude_root_cause(**parsed)
@@ -273,6 +286,9 @@ Evidence: {json.dumps(evidence, default=str)}
         "root_cause_evidence": evidence_trail,
         "root_cause_reasoning": reasoning_out,
         "upstream_causality_proven": proven_out,
+        "root_cause_confidence_score": 0.85 if proven_out else 0.45,
         "potential_root_causes": upstream_ancestors if upstream_ancestors else [affected_stage],
         "root_cause_llm_used": llm_concluded,
+        "llm_execution_events": llm_events,
+        "historical_incidents": historical_incidents,
     }

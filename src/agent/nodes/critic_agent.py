@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import os
 from typing import Any, Dict, List
-from ..utils.llm import generate_text, get_llm_provider
+from ..utils.llm import generate_text_with_audit, get_llm_provider, llm_model_name
 
 try:
     from google import genai
@@ -31,12 +31,14 @@ def critic_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
     issues = state.get("issues", [])
     affected_stage = state.get("affected_stage", "stg_orders")
     retry_count = state.get("critic_retry_count", 0)
+    remediation_plan = state.get("remediation_plan", [])
 
     # Default fallback verdict
     verdict = "APPROVED"
     reasoning = "Critic Agent verified proposals and root-cause conclusions against deterministic schema rules."
     critique_details: List[Dict[str, Any]] = []
     llm_used = False
+    llm_events = list(state.get("llm_execution_events", []))
 
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     provider = get_llm_provider()
@@ -51,8 +53,10 @@ Detected Issues: {issues}
 Root-Cause Stage: {root_cause_stage}
 Root-Cause Reasoning: {root_cause_reasoning}
 Triage Proposals: {proposals}
+Remediation Plan: {remediation_plan}
 """
-            text = generate_text(prompt, model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"))
+            text, event = generate_text_with_audit(prompt, stage="critic_agent", model=llm_model_name("groq"))
+            llm_events.append(event)
             if text:
                 llm_used = True
                 parsed = json.loads(text[text.find("{"):text.rfind("}") + 1])
@@ -131,4 +135,5 @@ Triage Proposals: {proposals}
         "requires_human_approval": requires_human_approval,
         "pipeline_status": pipeline_status,
         "critic_llm_used": llm_used,
+        "llm_execution_events": llm_events,
     }

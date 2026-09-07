@@ -41,6 +41,9 @@ data/run_history.jsonl
 data/quarantine/*
 data/queries/healed/*
 
+# Evaluation run artifacts are reproducible runtime data; reports and JSON are retained.
+evaluation/artifacts/
+
 # OS files
 .DS_Store
 Thumbs.db

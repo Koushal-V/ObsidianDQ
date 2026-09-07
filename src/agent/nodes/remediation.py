@@ -16,6 +16,7 @@ import pandas as pd
 
 INPUT_FILE = "data/raw/stg_orders.parquet"
 QUARANTINE_DIR = Path("data/quarantine")
+CLEANED_DIR = Path("data/cleaned")
 
 
 # ---------------------------------------------------------
@@ -78,6 +79,7 @@ def remediate_dq_issues(
 
     actions = []
     quarantined_rows = pd.DataFrame()
+    quarantine_mask = pd.Series(False, index=df.index)
 
     # -----------------------------------------------------
     # Process each detected issue
@@ -154,6 +156,9 @@ def remediate_dq_issues(
                 affected = df.loc[mask].copy()
 
             if not affected.empty:
+
+                # Keep an index-level union so overlapping issue rules never duplicate rows.
+                quarantine_mask.loc[affected.index] = True
 
                 quarantined_rows = pd.concat(
                     [
@@ -236,6 +241,7 @@ def remediate_dq_issues(
     # -----------------------------------------------------
 
     quarantine_path = None
+    cleaned_path = None
 
     if not quarantined_rows.empty:
 
@@ -253,6 +259,15 @@ def remediate_dq_issues(
             index=False
         )
 
+    # Never overwrite uploaded/raw input. Verification always checks this derived artifact.
+    CLEANED_DIR.mkdir(parents=True, exist_ok=True)
+    cleaned_path = CLEANED_DIR / f"{input_path.stem}_cleaned{input_path.suffix}"
+    cleaned = df.loc[~quarantine_mask].copy()
+    if input_path.suffix.lower() == ".csv":
+        cleaned.to_csv(cleaned_path, index=False)
+    else:
+        cleaned.to_parquet(cleaned_path, index=False)
+
     # -----------------------------------------------------
     # Build result
     # -----------------------------------------------------
@@ -268,6 +283,7 @@ def remediate_dq_issues(
             if quarantine_path
             else None
         ),
+        "cleaned_file": str(cleaned_path),
     }
 
     return result

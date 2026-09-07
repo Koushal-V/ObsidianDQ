@@ -25,6 +25,7 @@ def test_route_after_triage_branches():
 
 
 def test_llm_unavailable_fails_closed_to_review(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     result = triage_agent_node({
@@ -42,6 +43,7 @@ def test_llm_unavailable_fails_closed_to_review(monkeypatch):
 
 
 def test_checkpointed_review_resumes_through_graph(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     from src.agent.graph import run_pipeline
@@ -59,6 +61,7 @@ def test_checkpointed_review_resumes_through_graph(monkeypatch):
 
 
 def test_checkpointed_approval_resumes_downstream_nodes(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     from src.agent.graph import run_pipeline
@@ -68,13 +71,16 @@ def test_checkpointed_approval_resumes_downstream_nodes(monkeypatch):
     config = {"configurable": {"thread_id": paused["run_id"]}}
     graph.update_state(config, {"approval_decision": "approve"})
     resumed = graph.invoke(None, config)
-    assert resumed["pipeline_status"] == "APPROVED"
+    assert resumed["pipeline_status"] == "VERIFICATION_FAILED"
     assert resumed["sql_changed"] is True
     assert resumed["guardrails_approved"] is True
     assert resumed["route_taken"][-1] == "approval_approved"
+    assert resumed["verification_passed"] is False
+    assert resumed["verification_recovery_required"] is True
 
 
 def test_medium_only_approval_does_not_quarantine(monkeypatch, tmp_path):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     from src.agent.graph import run_pipeline
@@ -95,6 +101,7 @@ def test_medium_only_approval_does_not_quarantine(monkeypatch, tmp_path):
 
 
 def test_root_cause_agent_fails_closed(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     from src.agent.nodes.root_cause_agent import root_cause_agent_node
@@ -112,6 +119,7 @@ def test_root_cause_agent_fails_closed(monkeypatch):
 
 
 def test_critic_agent_fails_closed(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     from src.agent.nodes.critic_agent import critic_agent_node

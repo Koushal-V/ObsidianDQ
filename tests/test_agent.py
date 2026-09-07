@@ -191,8 +191,11 @@ def test_guardrails():
 # TEST 7 — COMPLETE PIPELINE
 # ============================================================
 
-def test_complete_pipeline():
+def test_complete_pipeline(monkeypatch):
     """Verify the complete ObsidianDQ pipeline executes."""
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
 
     from src.agent.graph import run_pipeline
 

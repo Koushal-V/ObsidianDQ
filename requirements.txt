@@ -5,6 +5,7 @@ guardrails-ai
 langchain-google-genai
 google-genai
 langchain-groq
+groq
 langgraph
 networkx
 pandas

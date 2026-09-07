@@ -87,6 +87,8 @@ class AgentState(TypedDict, total=False):
 
     upstream_causality_proven: bool
 
+    root_cause_confidence_score: float
+
     critic_verdict: str
 
     critic_reasoning: str
@@ -100,6 +102,30 @@ class AgentState(TypedDict, total=False):
     critic_llm_used: bool
 
     critic_critique_details: List[Dict[str, Any]]
+
+    # =========================================================
+    # Agentic investigation, planning, and incident memory
+    # =========================================================
+
+    investigation_evidence: List[Dict[str, Any]]
+
+    investigation_complete: bool
+
+    investigation_llm_used: bool
+
+    investigation_summary: str
+
+    llm_execution_events: List[Dict[str, Any]]
+
+    historical_incidents: List[Dict[str, Any]]
+
+    remediation_plan: List[Dict[str, Any]]
+
+    required_approvals: List[str]
+
+    plan_risk_level: str
+
+    planning_llm_used: bool
 
     # =========================================================
     # Agent triage and routing
@@ -152,6 +178,16 @@ class AgentState(TypedDict, total=False):
     quarantined_rows: int
 
     remediation_actions: List[Dict[str, Any]]
+
+    cleaned_file: Optional[str]
+
+    post_remediation_dq: Dict[str, Any]
+
+    verification_passed: bool
+
+    verification_details: Dict[str, Any]
+
+    verification_recovery_required: bool
 
     # =========================================================
     # Guardrails
@@ -237,6 +273,28 @@ def create_initial_state(
 
         potential_root_causes=[],
 
+        root_cause_confidence_score=0.0,
+
+        investigation_evidence=[],
+
+        investigation_complete=False,
+
+        investigation_llm_used=False,
+
+        investigation_summary="",
+
+        llm_execution_events=[],
+
+        historical_incidents=[],
+
+        remediation_plan=[],
+
+        required_approvals=[],
+
+        plan_risk_level="MEDIUM",
+
+        planning_llm_used=False,
+
         agent_reasoning=[],
 
         agent_proposed_actions=[],
@@ -276,6 +334,16 @@ def create_initial_state(
         quarantined_rows=0,
 
         remediation_actions=[],
+
+        cleaned_file=None,
+
+        post_remediation_dq={},
+
+        verification_passed=False,
+
+        verification_details={},
+
+        verification_recovery_required=False,
 
         guardrails_result={},
 

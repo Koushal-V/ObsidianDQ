@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Callable
 
 import pandas as pd
 
 from .lineage_rca import build_graph, find_ancestors, find_descendants, load_lineage
-from ..utils.llm import generate_text, get_llm_provider
+from ..utils.llm import DEFAULT_TEMPERATURE, generate_text, get_groq_client, get_llm_provider, llm_call_event, llm_model_name
 
 ACTIONS = {
     "AUTO_QUARANTINE",
@@ -91,6 +92,7 @@ def triage_agent_node(state: dict[str, Any]) -> dict[str, Any]:
     tool_calls: list[dict[str, Any]] = []
     proposals: list[dict[str, Any]] = []
     llm_used = False
+    llm_events = list(state.get("llm_execution_events", []))
 
     if not issues:
         return {
@@ -100,6 +102,7 @@ def triage_agent_node(state: dict[str, Any]) -> dict[str, Any]:
             "requires_human_approval": False,
             "route_taken": state.get("route_taken", []) + ["no_issues"],
             "triage_llm_used": False,
+            "llm_execution_events": llm_events,
         }
 
     tools: dict[str, Callable[..., dict[str, Any]]] = {
@@ -109,6 +112,8 @@ def triage_agent_node(state: dict[str, Any]) -> dict[str, Any]:
     }
 
     def propose_action(issue_id: str, action: str, confidence: float, reasoning: str) -> dict[str, Any]:
+        # Unknown identifiers are kept visible and fail closed in the coverage pass below.
+        issue_id = str(issue_id)
         normalized = str(action).upper()
         proposal = {
             "issue_id": issue_id,
@@ -125,31 +130,57 @@ def triage_agent_node(state: dict[str, Any]) -> dict[str, Any]:
 
     if provider == "groq":
         try:
-            evidence = []
-            for issue in issues:
-                column = str(issue.get("column") or "")
-                condition = str(issue.get("rule", "issue"))
-                evidence.append({
-                    "issue": issue,
-                    "sample_rows": _sample_rows(state["input_file"], column, condition),
-                    "lineage": _lineage_context(state.get("affected_stage", "stg_orders"), state["lineage_file"]),
-                    "history": _column_history(column),
-                })
-            prompt = f"""
-You are the ObsidianDQ Triage Agent. Inspect the supplied data-quality issues and evidence.
-Choose exactly one action for every issue: AUTO_QUARANTINE, FLAG_FOR_REVIEW, IGNORE_TRANSIENT, or ESCALATE_UPSTREAM.
-Return JSON only as {{\"proposals\":[{{\"issue_id\":\"RULE:column\",\"action\":\"...\",\"confidence\":0.0,\"reasoning\":\"...\"}}]}}.
-Never execute remediation.
-Evidence: {json.dumps(evidence, default=str)}
-"""
-            text = generate_text(prompt, model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"))
-            if text:
-                parsed = json.loads(text[text.find("{"):text.rfind("}") + 1])
-                for proposal in parsed.get("proposals", []):
-                    tools["propose_action"](**proposal)
-                    initial_trace.append({"type": "decision", "text": "Groq Triage Agent produced a structured proposal."})
-                llm_used = bool(proposals)
+            client = get_groq_client()
+            if not client:
+                llm_events.append(llm_call_event("triage_agent", "groq", success=False, started_at=time.perf_counter(), error="Groq client initialization failed"))
+                raise RuntimeError("Groq client is unavailable")
+            declarations = [
+                {"type": "function", "function": {"name": "get_sample_rows", "description": "Read actual offending rows.", "parameters": {"type": "object", "properties": {"column": {"type": "string"}, "condition": {"type": "string"}}, "required": ["column", "condition"]}}},
+                {"type": "function", "function": {"name": "get_lineage_context", "description": "Read lineage context.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}}, "required": ["stage"]}}},
+                {"type": "function", "function": {"name": "get_column_history", "description": "Read prior incidents.", "parameters": {"type": "object", "properties": {"column": {"type": "string"}}, "required": ["column"]}}},
+                {"type": "function", "function": {"name": "propose_action", "description": "Record a non-executing proposal for an exact issue id.", "parameters": {"type": "object", "properties": {"issue_id": {"type": "string"}, "action": {"type": "string", "enum": sorted(ACTIONS)}, "confidence": {"type": "number"}, "reasoning": {"type": "string"}}, "required": ["issue_id", "action", "confidence", "reasoning"]}}},
+            ]
+            critique = state.get("critic_reasoning", "") if state.get("critic_verdict") == "REVISION_REQUIRED" else ""
+            messages: list[dict[str, Any]] = [
+                {"role": "system", "content": "Dynamically select read-only tools before calling propose_action exactly once per issue. Never execute remediation."},
+                {"role": "user", "content": json.dumps({"stage": state.get("affected_stage"), "issues": issues, "critic_feedback": critique}, default=str)},
+            ]
+            for _ in range(8):
+                started_at = time.perf_counter()
+                response = None
+                for attempt in range(3):
+                    try:
+                        response = client.chat.completions.create(model=llm_model_name("groq"), messages=messages, tools=declarations, tool_choice="auto", temperature=DEFAULT_TEMPERATURE, max_tokens=400)
+                        break
+                    except Exception as exc:
+                        if ("rate_limit" in str(exc).lower() or "429" in str(exc)) and attempt < 2:
+                            time.sleep(2 * (attempt + 1))
+                            continue
+                        raise exc
+                llm_events.append(llm_call_event("triage_agent", "groq", success=True, started_at=started_at))
+                message = response.choices[0].message
+                messages.append(message.model_dump(exclude_none=True))
+                calls = message.tool_calls or []
+                if not calls:
+                    if message.content:
+                        initial_trace.append({"type": "decision", "text": message.content})
+                    break
+                for call in calls:
+                    args = json.loads(call.function.arguments or "{}")
+                    tool_started = time.perf_counter()
+                    try:
+                        result = tools[call.function.name](**args)
+                        tool_error = None
+                    except Exception as exc:
+                        result, tool_error = {"error": str(exc)[:500]}, str(exc)
+                    tool_calls.append({"name": call.function.name, "arguments": args, "result": result, "fallback": False, "sequence": len(tool_calls) + 1, "timestamp": llm_call_event("tool", "groq", success=True, started_at=tool_started)["timestamp"], "latency_ms": round((time.perf_counter() - tool_started) * 1000, 2), "error": tool_error})
+                    initial_trace.append({"type": "tool", "text": f"Called {call.function.name} with {args}", "result": result})
+                    messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result, default=str)})
+                    if call.function.name == "propose_action":
+                        llm_used = True
         except Exception as exc:
+            if 'started_at' in locals() and not (llm_events and llm_events[-1].get("success") is False):
+                llm_events.append(llm_call_event("triage_agent", "groq", success=False, started_at=started_at, error=exc))
             initial_trace.append({"type": "warning", "text": f"Groq triage unavailable; deterministic fallback used: {exc}"})
     elif api_key:
         try:
@@ -186,7 +217,7 @@ Evidence: {json.dumps(evidence, default=str)}
             prompt = (
                 "You are the ObsidianDQ triage agent. Inspect real evidence with tools before deciding. "
                 "Call get_sample_rows, get_lineage_context, or get_column_history as useful, then call "
-                "propose_action exactly once for every issue. Never execute remediation.\n"
+                "propose_action exactly once for every issue. The issue_id MUST exactly match 'RULE:column' from the supplied issue. Never execute remediation.\n"
                 + critic_context
                 + json.dumps({"stage": state.get("affected_stage"), "issues": issues}, default=str)
             )
@@ -250,7 +281,9 @@ Evidence: {json.dumps(evidence, default=str)}
                 "reasoning": "No proposal was returned for this issue.",
             })
 
-    requires_approval = any(
+    # High-risk plans and uncertain proposals always require a checkpointed
+    # human decision. An LLM confidence value can never bypass this gate.
+    requires_approval = state.get("plan_risk_level") == "HIGH" or any(
         item["action"] == "FLAG_FOR_REVIEW" or item["confidence"] < 0.7
         for item in proposals
     )
@@ -270,4 +303,5 @@ Evidence: {json.dumps(evidence, default=str)}
         "route_taken": state.get("route_taken", []) + [route],
         "escalation_count": state.get("escalation_count", 0) + (1 if route == "escalate" else 0),
         "triage_llm_used": llm_used,
+        "llm_execution_events": llm_events,
     }
