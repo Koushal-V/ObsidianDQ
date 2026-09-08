@@ -8,8 +8,7 @@ deterministic workflow checks with live LLM-agent performance.
 ```powershell
 # Offline controlled-system validation (recommended for CI)
 $env:GROQ_API_KEY=''
-python evaluation/run_controlled_benchmark.py
-
+Evaluation
 # Live-agent evaluation (requires a valid Groq key and network access)
 $env:GROQ_API_KEY='your_key'
 python evaluation/run_controlled_benchmark.py

@@ -105,3 +105,82 @@ body {
 .panel .text-slate-300, .panel .text-slate-200 { color: #3D1534; }
 .panel .text-slate-400, .panel .text-slate-500 { color: #5f7180; }
 .panel .border-slate-800, .panel .border-slate-700, .panel .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: #A6BCC9; }
+/* ══════════════════════════════════════════════════════════════════
+   OBSERVABILITY DESIGN LAYER
+   One primary UI font (Inter) throughout. Monospace only for
+   technical data/logs. Hierarchy via type scale, spacing and subtle
+   separators instead of heavy cards and shadows.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Type scale ─────────────────────────────────────────────────── */
+/* These map onto the tailwind.config sans (Inter) family.           */
+.obs-page-title  { @apply text-xl font-extrabold tracking-tight text-[#3D1534]; }
+.obs-section     { @apply text-sm font-semibold text-[#3D1534]; }          /* section title  */
+.obs-value       { @apply text-lg font-bold text-[#3D1534]; }
+.obs-label       { @apply text-[11px] font-semibold uppercase tracking-[.08em] text-[#3D1534]/55; }
+.obs-sub         { @apply text-xs font-medium text-[#3D1534]/70; }         /* supporting text */
+.obs-mono        { @apply text-xs font-mono text-[#3D1534] font-semibold; } /* technical data */
+.obs-lede        { @apply text-sm font-medium text-[#3D1534]/80; }
+
+/* ── Panels / blocks ────────────────────────────────────────────── */
+/* Thin, subtle borders + background layering, minimal shadow.        */
+.obs-panel      { @apply rounded-md border border-[#A6BCC9]/45 bg-white; }
+.obs-panel-flat { @apply rounded-md border border-[#A6BCC9]/30 bg-[#FFF4EB]; }
+.obs-divider    { @apply border-t border-[#A6BCC9]/30; }
+
+/* ── Status semantics (from the existing ObsidianDQ palette) ─────── */
+.obs-dot-ok       { @apply h-2 w-2 rounded-full bg-emerald-500; }
+.obs-dot-warn     { @apply h-2 w-2 rounded-full bg-amber-500; }
+.obs-dot-crit     { @apply h-2 w-2 rounded-full bg-rose-500 animate-pulse; }
+.obs-dot-active   { @apply h-2 w-2 rounded-full bg-[#3E4B8E]; }
+.obs-dot-blocked  { @apply h-2 w-2 rounded-full bg-rose-600; }
+.obs-dot-muted    { @apply h-2 w-2 rounded-full bg-[#A6BCC9]; }
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+.obs-btn-primary   { @apply inline-flex items-center gap-1.5 rounded-md bg-[#3E4B8E] px-3.5 py-2 text-sm font-semibold text-white transition; }
+.obs-btn-primary:hover { @apply bg-[#2F396E]; }
+.obs-btn-primary:disabled { @apply opacity-50 cursor-not-allowed; }
+.obs-btn-secondary { @apply inline-flex items-center gap-1.5 rounded-md border border-[#A6BCC9]/60 bg-white px-3.5 py-2 text-sm font-semibold text-[#3D1534] transition; }
+.obs-btn-secondary:hover { @apply border-[#3E4B8E] bg-[#FFF4EB]; }
+.obs-btn-secondary:disabled { @apply opacity-50 cursor-not-allowed; }
+.obs-btn-ghost     { @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-[#3E4B8E] transition; }
+.obs-btn-ghost:hover { @apply bg-[#F6E0B6]/60; }
+.obs-btn-ghost:disabled { @apply opacity-50; }
+
+/* ── Tooltip (CSS-driven, no JS required to show on hover/focus) ── */
+.obs-tip-wrap { @apply relative inline-flex; }
+.obs-tip {
+  @apply pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2
+         whitespace-nowrap rounded-md border border-[#A6BCC9]/60 bg-[#3D1534] px-2 py-1
+         text-[10.5px] font-medium text-[#FFF4EB] shadow-sm opacity-0;
+  transition: opacity 120ms ease-in;
+  max-width: 240px;
+  white-space: normal;
+}
+.obs-tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #3D1534;
+}
+.obs-tip-wrap:hover .obs-tip,
+.obs-tip-wrap:focus .obs-tip,
+.obs-tip-wrap:focus-within .obs-tip { opacity: 1; }
+
+/* ── Compact dense data table ───────────────────────────────────── */
+.obs-table { @apply w-full text-left text-[13px] leading-snug; }
+.obs-thead { @apply bg-[#FFF4EB]; }
+.obs-th    { @apply px-3 py-2 text-[11px] font-semibold uppercase tracking-[.06em] text-[#3D1534]/60 border-b border-[#A6BCC9]/35 whitespace-nowrap; }
+.obs-td    { @apply px-3 py-2 text-[13px] text-[#3D1534]; }
+.obs-row   { @apply border-b border-[#A6BCC9]/20 transition-colors; }
+.obs-row:hover { @apply bg-[#F6E0B6]/25; }
+
+/* ── Misc ───────────────────────────────────────────────────────── */
+.obs-monoblock {
+  @apply block w-full overflow-auto rounded-md border border-[#A6BCC9]/50 bg-[#3D1534]
+         p-3 text-xs font-mono text-[#FFF4EB] leading-relaxed;
+}
+.obs-kbd { @apply inline-flex items-center rounded bg-[#F6E0B6] px-1.5 py-0.5 font-mono text-[10.5px] font-bold text-[#3D1534] border border-[#E4CA97]; }

@@ -11,6 +11,7 @@ from typing import Any, Callable
 import pandas as pd
 
 from .lineage_rca import build_graph, find_ancestors, find_descendants, load_lineage
+from ..utils.db import column_run_history as _column_run_history
 from ..utils.llm import DEFAULT_TEMPERATURE, generate_text, get_groq_client, get_llm_provider, llm_call_event, llm_model_name
 
 ACTIONS = {
@@ -70,19 +71,7 @@ def _lineage_context(stage: str, lineage_file: str) -> dict[str, Any]:
 
 
 def _column_history(column: str) -> dict[str, Any]:
-    history_file = Path(__file__).resolve().parents[3] / "data" / "run_history.jsonl"
-    if not history_file.exists():
-        return {"column": column, "runs": 0, "message": "No run history is available yet."}
-
-    matches = []
-    for line in history_file.read_text(encoding="utf-8").splitlines():
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if column in record.get("failed_columns", []):
-            matches.append(record)
-    return {"column": column, "runs": len(matches), "recent": matches[-5:]}
+    return _column_run_history(column)
 
 
 def triage_agent_node(state: dict[str, Any]) -> dict[str, Any]:

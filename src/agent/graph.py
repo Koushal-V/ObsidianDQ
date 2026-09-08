@@ -43,6 +43,14 @@ from .nodes.critic_agent import critic_agent_node
 from .nodes.investigation_agent import investigation_agent_node
 from .nodes.planning_agent import planning_agent_node
 from .nodes.verify_agent import verify_remediation_node
+from .utils.db import (
+    save_dq_result,
+    save_incidents,
+    save_rca_conclusion,
+    save_rca_evidence,
+    save_remediation_result,
+    save_run,
+)
 from .utils.memory import save_incident_memory
 
 
@@ -50,6 +58,86 @@ from .utils.memory import save_incident_memory
 # ============================================================
 # PROJECT PATHS
 # ============================================================
+
+
+
+# ---------------------------------------------------------------
+# Persistence helpers
+# ---------------------------------------------------------------
+
+
+def _persist_run_data(state: dict[str, Any]) -> None:
+    """Persist structured run data to DuckDB (non-fatal)."""
+    try:
+        run_id = state.get("run_id", "")
+        if not run_id:
+            return
+
+        # Run record
+        health_score = state.get("pipeline_health", {}).get("overall_health_score")
+        if health_score is None:
+            # Derive from severity summary when pipeline_health is not present
+            severity = state.get("severity_summary", {})
+            high = severity.get("HIGH", 0)
+            medium = severity.get("MEDIUM", 0)
+            low = severity.get("LOW", 0)
+            health_score = max(0, 100 - (high * 15 + medium * 5 + low * 1))
+
+        save_run({
+            "run_id": run_id,
+            "timestamp": state.get("timestamp", ""),
+            "pipeline_name": state.get("pipeline_name", "ObsidianDQ"),
+            "affected_stage": state.get("affected_stage", ""),
+            "input_file": state.get("input_file"),
+            "sql_file": state.get("sql_file"),
+            "lineage_file": state.get("lineage_file"),
+            "row_count": state.get("row_count"),
+            "column_count": state.get("column_count"),
+            "issue_count": state.get("issue_count"),
+            "health_score": health_score,
+            "pipeline_status": state.get("pipeline_status"),
+            "requires_human_approval": state.get("requires_human_approval", False),
+            "route_taken": state.get("route_taken", []),
+            "final_result": state.get("final_result", {}),
+        })
+
+        # Incidents
+        issues = state.get("issues", [])
+        if issues:
+            save_incidents(run_id, issues)
+
+        # DQ results
+        dq_result = state.get("dq_result")
+        if dq_result:
+            save_dq_result(run_id, dq_result)
+
+        # RCA evidence
+        evidence = state.get("root_cause_evidence", [])
+        if evidence:
+            save_rca_evidence(run_id, evidence)
+        save_rca_conclusion(
+            run_id,
+            state.get("root_cause_stage", ""),
+            state.get("root_cause_reasoning", ""),
+            state.get("root_cause_confidence_score", 0.0),
+        )
+
+        # Remediation results
+        remediation = state.get("remediation_result")
+        if remediation:
+            save_remediation_result(run_id, {
+                "input_file": remediation.get("input_file"),
+                "total_rows": remediation.get("total_rows"),
+                "issues_received": remediation.get("issues_received"),
+                "quarantined_rows": remediation.get("quarantined_rows"),
+                "quarantine_file": remediation.get("quarantine_file"),
+                "cleaned_file": remediation.get("cleaned_file"),
+                "actions": remediation.get("actions", []),
+                "verification_passed": state.get("verification_passed"),
+                "verification_details": state.get("verification_details", {}),
+            })
+    except Exception as exc:
+        print(f"[DB Persistence Warning] {exc}")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -714,6 +802,9 @@ def run_pipeline(
         initial_state,
         config={"configurable": {"thread_id": initial_state["run_id"]}},
     )
+
+    # Persist structured run data to DuckDB (non-fatal)
+    _persist_run_data(final_state)
 
     return final_state
 

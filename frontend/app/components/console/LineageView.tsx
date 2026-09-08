@@ -2,43 +2,29 @@
 
 import { Background, Controls, Handle, Position, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
+import { clsx } from "clsx";
 import { RunData } from "@/app/lib/runState";
+import { EmptyState, SectionHeader, StatusBadge, toneOf, type Tone } from "@/app/components/obs";
 
 function AssetNode({ data }: { data: { label: string; status: string; issues: number } }) {
-  // Purely check node's own issue count (Phase 2 Fix)
-  const isAnomalous = data.issues > 0;
-  const isHealthy = data.issues === 0;
-
+  // Base status purely on the node's own issue count (deterministic).
+  const tone: Tone = data.issues > 0 ? "critical" : "healthy";
+  const t = toneOf(tone);
   return (
-    <div
-      className={`min-w-48 rounded-2xl border-2 p-4 shadow-md transition-all ${
-        isAnomalous
-          ? "border-rose-400 bg-rose-50 text-rose-900"
-          : "border-emerald-400 bg-emerald-50 text-emerald-900"
-      }`}
-    >
-      <Handle type="target" position={Position.Top} className="!bg-[#3E4B8E] !w-3 !h-3" />
-      <div className="flex items-center gap-2 text-xs font-extrabold">
-        {isAnomalous ? (
-          <ShieldAlert size={16} className="text-rose-600 shrink-0" />
-        ) : (
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-        )}
-        <span>{data.label}</span>
+    <div className={clsx("min-w-44 rounded-md border-2 px-3 py-2.5 shadow-sm", t.border, t.bg)}>
+      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !bg-[#3E4B8E]" />
+      <div className="flex items-center gap-1.5 text-xs font-bold text-[#3D1534]">
+        <span className={clsx("h-2 w-2 rounded-full shrink-0", t.dot)} />
+        <span className="min-w-0 truncate">{data.label}</span>
       </div>
-      <div className="mt-2 text-[11px] font-bold">
-        {isAnomalous ? (
-          <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 border border-rose-300">
-            {data.issues} issue{data.issues === 1 ? "" : "s"} detected
-          </span>
-        ) : (
-          <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 border border-emerald-300">
-            Healthy (0 issues)
-          </span>
-        )}
+      <div className="mt-1 flex items-center gap-1">
+        <StatusBadge
+          tone={tone}
+          dot={false}
+          label={data.issues > 0 ? `${data.issues} issue${data.issues === 1 ? "" : "s"}` : "Healthy"}
+        />
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-[#3E4B8E] !w-3 !h-3" />
+      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !bg-[#3E4B8E]" />
     </div>
   );
 }
@@ -46,15 +32,9 @@ function AssetNode({ data }: { data: { label: string; status: string; issues: nu
 const nodeTypes = { asset: AssetNode };
 
 export function LineageView({ run }: { run: RunData }) {
-  if (!run.lineage_graph.nodes.length)
-    return (
-      <section className="bg-white border-2 border-[#F6E0B6] rounded-2xl p-6 shadow-sm">
-        <p className="eyebrow">NO LINEAGE PROVIDED</p>
-        <p className="mt-2 text-sm text-[#3D1534]/70 font-medium">
-          Upload lineage.json to visualize upstream and downstream topology.
-        </p>
-      </section>
-    );
+  if (!run.lineage_graph.nodes.length) {
+    return <EmptyState title="No lineage provided" detail="Upload lineage.json to visualize upstream and downstream topology." />;
+  }
 
   const nodes: Node[] = run.lineage_graph.nodes.map((n, i) => ({
     id: n.id,
@@ -85,19 +65,12 @@ export function LineageView({ run }: { run: RunData }) {
   }));
 
   return (
-    <section className="bg-[#FFF4EB] border-2 border-[#F6E0B6] rounded-2xl overflow-hidden shadow-sm">
-      <div className="px-6 py-4 bg-[#3D1534] text-[#FFF4EB] flex items-center justify-between">
-        <div>
-          <p className="eyebrow text-[#A6BCC9]">LINEAGE &amp; IMPACT VECTOR</p>
-          <h2 className="text-base font-extrabold text-[#FFF4EB] mt-0.5">Dependency Topology</h2>
-        </div>
-        <div className="flex gap-2 text-xs font-bold">
-          <span className="flex items-center gap-1.5 bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full">
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" /> Anomalous
-          </span>
-          <span className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Healthy
-          </span>
+    <div className="obs-panel overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#A6BCC9]/30 px-3 py-2.5">
+        <SectionHeader eyebrow="Lineage & impact" title="Dependency topology" />
+        <div className="flex items-center gap-2">
+          <StatusBadge tone="critical" label="Anomalous" pulse />
+          <StatusBadge tone="healthy" label="Healthy" />
         </div>
       </div>
 
@@ -116,10 +89,11 @@ export function LineageView({ run }: { run: RunData }) {
         </ReactFlow>
       </div>
 
-      <div className="border-t border-[#A6BCC9] bg-[#F6E0B6] p-4 text-xs font-bold text-[#3D1534]">
-        <span className="font-extrabold text-[#3E4B8E]">Root Cause Origin Candidate: </span>
-        {run.root_cause_analysis.root_cause_table}. {run.root_cause_analysis.blast_radius}
+      <div className="flex items-center gap-2 border-t border-[#A6BCC9]/30 bg-[#F6E0B6]/40 px-3 py-2 text-xs font-medium text-[#3D1534]">
+        <span className="font-semibold text-[#5f7180]">Root cause origin candidate:</span>
+        <span className="obs-kbd">{run.root_cause_analysis.root_cause_table}</span>
+        <span className="text-[#3D1534]/70">{run.root_cause_analysis.blast_radius}</span>
       </div>
-    </section>
+    </div>
   );
 }

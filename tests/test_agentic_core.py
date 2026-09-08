@@ -34,11 +34,20 @@ def test_verification_checks_cleaned_artifact(tmp_path: Path):
 
 
 def test_incident_memory_round_trip(monkeypatch, tmp_path: Path):
-    memory_file = tmp_path / "incident_memory.jsonl"
-    monkeypatch.setattr("src.agent.utils.memory.MEMORY_FILE", memory_file)
-    save_incident_memory({"issue_keys": ["NOT_NULL:customer_id"], "resolution": "quarantine and verify"})
+    import src.agent.utils.db as db_module
+    monkeypatch.setattr(db_module, "_db_path", tmp_path / "test.duckdb")
+    db_module.init_schema()
+    record = {
+        "run_id": "mem-test-1",
+        "affected_stage": "stg_orders",
+        "issue_keys": ["NOT_NULL:customer_id"],
+        "resolution": "quarantine and verify",
+    }
+    save_incident_memory(record)
     records = search_similar_incidents("customer_id", "NOT_NULL")
-    assert records[0]["resolution"] == "quarantine and verify"
+    assert len(records) >= 1
+    assert records[0]["column_name"] == "customer_id"
+    assert records[0]["rule"] == "NOT_NULL"
 
 
 def test_groq_triage_selects_tools_over_multiple_turns(monkeypatch):

@@ -24,10 +24,18 @@ from src.agent.graph import build_graph, run_pipeline
 from src.agent.nodes.stage_profile import profile_stage
 from src.agent.nodes.remediation import remediate_dq_issues
 from src.agent.nodes.guardrails import apply_guardrails
+from src.agent.utils.db import save_run as _db_save_run
+from src.agent.utils.db import close_connection as _db_close_connection
 from src.agent.utils.llm import generate_text, get_llm_provider
 
 app = FastAPI(title="ObsidianDQ Backend API", version="2.0.0")
 RUN_STATES: Dict[str, Dict[str, Any]] = {}
+
+
+@app.on_event("shutdown")
+def _shutdown_db_connection():
+    """Release the shared DuckDB connection cleanly on server shutdown."""
+    _db_close_connection()
 
 
 def generate_gemini_summary(affected_stage: str, issue_count: int, issues: list, upstream_path: list) -> str:
@@ -64,11 +72,9 @@ def generate_gemini_summary(affected_stage: str, issue_count: int, issues: list,
 
 def _log_run_history(response_data: dict):
     """
-    Persist pipeline run summary to data/run_history.jsonl.
+    Persist pipeline run summary to DuckDB.
     """
     try:
-        history_file = PROJECT_ROOT / "data" / "run_history.jsonl"
-        history_file.parent.mkdir(parents=True, exist_ok=True)
         failed_columns = list({
             iss.get("column")
             for iss in response_data.get("issues", [])
@@ -77,13 +83,13 @@ def _log_run_history(response_data: dict):
         record = {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "run_id": response_data.get("run_id", ""),
+            "pipeline_name": "ObsidianDQ",
             "affected_stage": response_data.get("root_cause_analysis", {}).get("failing_table", "stg_orders"),
             "health_score": response_data.get("pipeline_health", {}).get("overall_health_score", 100),
             "failed_columns": failed_columns,
             "issue_count": len(response_data.get("issues", [])),
         }
-        with history_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
+        _db_save_run(record)
     except Exception as exc:
         print(f"[Run History Logging Warning] {exc}")
 
@@ -127,7 +133,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
     issues = state.get("issues", [])
     issue_count = state.get("issue_count", len(issues))
     severity_summary = state.get("severity_summary", {"HIGH": 0, "MEDIUM": 0, "LOW": 0})
-    
+
     # ----------------------------------------------------
     # TIER 1: Pipeline Health Telemetry
     # ----------------------------------------------------
@@ -138,7 +144,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
         for issue in issues
         if str(issue.get("severity", "")).upper() == "HIGH"
     }
-    
+
     if high_sev > 0 or issue_count > 3:
         status = "ANOMALIES_DETECTED"
     elif med_sev > 0 or issue_count > 0:
@@ -149,15 +155,15 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
     # Health score formula (100 base - 15*HIGH - 5*MED - 2*LOW)
     raw_score = 100 - (high_sev * 15 + med_sev * 5 + severity_summary.get("LOW", 0) * 2)
     overall_health_score = max(0, min(100, raw_score))
-    
+
     row_count = state.get("row_count", 0)
-    
+
     scanned_tables = ["raw_customers", "stg_orders", "fct_sales"]
     if state.get("lineage") and isinstance(state["lineage"], dict):
         nodes = state["lineage"].get("nodes", [])
         if nodes:
             scanned_tables = [n.get("name", str(n)) for n in nodes if isinstance(n, (dict, str))]
-    
+
     pipeline_health = {
         "status": status,
         "overall_health_score": overall_health_score,
@@ -173,7 +179,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
     lineage_path = Path(lineage_file)
     if not lineage_path.is_absolute():
         lineage_path = PROJECT_ROOT / lineage_path
-    
+
     lineage_data = {}
     if lineage_path.exists():
         try:
@@ -199,9 +205,9 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
         else:
             n_id = str(node)
             n_type = "Dataset"
-            
+
         label = f"{n_id} ({n_type})"
-        
+
         if n_id == affected_stage and n_id in high_issue_stages:
             n_status = "FAILED"
         elif n_id == affected_stage and issue_count > 0:
@@ -246,7 +252,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
         isinstance(repair, dict) and repair.get("type") == "COLUMN_REPAIR"
         for repair in state.get("sql_repairs", [])
     )
-    
+
     tokens_replaced = []
     for repair in state.get("sql_repairs", []):
         if isinstance(repair, dict):
@@ -255,7 +261,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
                 "corrected_token": repair.get("new", "AST Normalized"),
                 "reason": repair.get("description", "AST token matching against DuckDB schema.")
             })
-    
+
     sql_diagnostics = {
         "sql_healing_ran": sql_healing_ran,
         "has_error": len(state.get("sql_problems", [])) > 0 or has_real_sql_repair,
@@ -269,7 +275,7 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
     # ----------------------------------------------------
     blast_radius_count = state.get("blast_radius_count", len(state.get("downstream_blast_radius", [])))
     blast_radius_text = f"{blast_radius_count + 1} downstream dashboard{'s' if blast_radius_count != 0 else ''} affected"
-    
+
     upstream_path = list(reversed(state.get("upstream_ancestors", [])))
     if affected_stage not in upstream_path:
         upstream_path.append(affected_stage)
@@ -352,21 +358,21 @@ def format_3tier_response(state: Dict[str, Any], duration_ms: int) -> Dict[str, 
     # ----------------------------------------------------
     input_file = state.get("input_file")
     profiling_metrics = []
-    
+
     if input_file and Path(input_file).exists():
         try:
             profile = profile_stage(input_file)
             cols = profile.get("columns", {})
-            
+
             for col_name, col_data in cols.items():
                 col_null_pct = col_data.get("null_percentage", 0.0)
                 col_distinct = col_data.get("unique_count", 0)
                 col_dtype = col_data.get("dtype", "VARCHAR").upper()
-                
+
                 # Determine status based on issues
                 col_has_issue = any(iss.get("column") == col_name for iss in issues)
                 col_status = "FAILED_EXPECTATION" if col_has_issue else "PASSED"
-                
+
                 profiling_metrics.append({
                     "column_name": col_name,
                     "null_percentage": col_null_pct,
@@ -439,7 +445,7 @@ def run_pipeline_api(req: Optional[PipelineRunRequest] = None):
     Run ObsidianDQ pipeline and return formatted 3-Tier telemetry response.
     """
     start_time = time.time()
-    
+
     input_file = req.input_file if req and req.input_file else str(PROJECT_ROOT / "data" / "raw" / "stg_orders.parquet")
     sql_file = req.sql_file if req and req.sql_file else str(PROJECT_ROOT / "data" / "queries" / "fct_sales.sql")
     lineage_file = req.lineage_file if req and req.lineage_file else str(PROJECT_ROOT / "data" / "lineage" / "lineage.json")
@@ -565,7 +571,7 @@ def execute_quarantine_api(req: QuarantineRequest):
     Execute 1-click quarantine on affected dataset.
     """
     input_file = req.input_file or str(PROJECT_ROOT / "data" / "raw" / "stg_orders.parquet")
-    
+
     try:
         res = remediate_dq_issues(input_file=input_file, issues=[
             {"severity": "HIGH", "rule": "PRICE_NON_NEGATIVE", "column": "price"},

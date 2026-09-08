@@ -1,8 +1,10 @@
-# ObsidianDQ
+# Hybrid Agentic Data Quality Investigation and Remediation System
 
 ObsidianDQ is a local data-quality investigation app. A FastAPI backend runs a LangGraph workflow over CSV or Parquet files, optional SQL, and a lineage JSON file. A Next.js dashboard shows the run, evidence, proposals, and approval state.
 
-Deterministic code profiles data, detects issues, traverses lineage, repairs SQL with constrained `sqlglot` AST operations, writes cleaned and quarantine artifacts, and re-runs DQ checks. LLM agents inspect that evidence and propose decisions. They do not execute row changes or SQL writes.
+This is a **Hybrid Agentic Data Quality Investigation and Remediation System**. It uses deterministic code for data quality detection and pipeline stages (profiling, lineage traversal, SQL repair, quarantine, and re-checking). LLM-based agents provide investigation with dynamic tool selection, root-cause reasoning, planning, triage, and criticism. The graph supports feedback/loop-based investigation and remediation, human-in-the-loop approval for risky actions, and verification after remediation.
+
+LLM agents inspect evidence and propose decisions. They do not execute row changes or SQL writes.
 
 When an LLM call is missing or fails, agents keep going with documented fallbacks. Triage without an LLM proposal flags every issue for human review. The critic currently **approves** on LLM failure rather than blocking the run. Failed post-remediation verification is recorded as `VERIFICATION_FAILED` and still continues to guardrails.
 
@@ -15,7 +17,7 @@ When an LLM call is missing or fails, agents keep going with documented fallback
 - Root-cause, planning, triage, and critic nodes produce reviewable JSON/state, not side effects.
 - Human approval via a LangGraph interrupt when plan risk is `HIGH`, a proposal is `FLAG_FOR_REVIEW`, or confidence is below `0.7`.
 - After critic approval or human approve: SQL healer, then remediation, then verification on the cleaned file.
-- Local incident memory in `data/memory/incident_memory.jsonl`.
+- Local incident memory and run history stored in DuckDB (`data/obsidiandq.duckdb`).
 - Dashboard: upload, confirmation ticket, staged run animation, then the run console.
 
 The demo dataset and lineage live under `data/raw`, `data/queries`, and `data/lineage`. This is not a warehouse or production orchestrator.
@@ -155,6 +157,19 @@ Useful response fields: `pipeline_health`, `issues`, `root_cause_analysis` (incl
 
 CORS is limited to localhost / `127.0.0.1` (any port).
 
+
+## Storage
+
+Structured run data is stored in a local DuckDB database (`data/obsidiandq.duckdb`):
+
+- **runs** - pipeline execution records
+- **incidents** - detected DQ issues linked to runs
+- **dq_results** - full DQ detection result payloads
+- **rca_evidence** - root-cause investigation evidence trails
+- **remediation_results** - remediation actions and outcomes
+- **evaluation_records** - controlled-benchmark evaluation payloads
+
+CSV/Parquet files remain the input/output dataset format. The storage utility lives in `src/agent/utils/db.py` and uses parameterized SQL with safe connection handling.
 ## Run locally
 
 ### Backend
@@ -207,7 +222,7 @@ Grounding rules that the harness already encodes:
 
 ## Repository hygiene
 
-`.gitignore` excludes `.env`, caches, Node/`frontend/.next`, uploads, `data/run_history.jsonl`, quarantine files, healed SQL, and `evaluation/artifacts/`. Evaluation **reports** under `evaluation/results/` are kept. Do not commit API keys.
+`.gitignore` excludes `.env`, caches, Node/`frontend/.next`, uploads, `data/*.duckdb`, quarantine files, healed SQL, and `evaluation/artifacts/`. Evaluation **reports** under `evaluation/results/` are kept. Do not commit API keys.
 
 ## Limitations
 
